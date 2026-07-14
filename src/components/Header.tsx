@@ -18,7 +18,7 @@ export function Header({ isDarkMode, onToggleDarkMode }: HeaderProps) {
             <div className={`p-1 rounded-xl overflow-hidden flex items-center justify-center ${
               isDarkMode ? 'bg-white/10' : 'bg-white border shadow-sm'
             }`} style={{ width: '56px', height: '56px' }}>
-              <img src="/logo.jpg" alt="Logo SFUN" className="w-full h-full object-cover scale-[1.3] rounded-lg" />
+              <img src={`${import.meta.env.BASE_URL}logo.jpg`} alt="Logo SFUN" className="w-full h-full object-cover scale-[1.3] rounded-lg" />
             </div>
             <div>
               <h1 className={`text-2xl font-bold tracking-tight ${
