@@ -1,6 +1,7 @@
 import pandas as pd
 import json
 import math
+import os
 from datetime import datetime
 
 def clean_string(val):
@@ -82,9 +83,13 @@ for index, row in df.iterrows():
     }
     contracts.append(contract)
 
-ts_content = """// Datos generados automáticamente desde el Excel "VIGENTES SFUN.xlsx"
+now = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
 
-export interface Contract {
+ts_content = f"""// Datos generados automáticamente desde el Excel "VIGENTES SFUN.xlsx"
+
+export const lastUpdate = "{now}";
+
+export interface Contract {{
   id: string;
   productoProvision: string;
   estadoVenta: string;
@@ -93,12 +98,13 @@ export interface Contract {
   grupoAtraso: string;
   tipo: string;
   gestion: string;
+  regional: string;
   valorTotalContrato: number;
   contratoActivo: boolean;
   fechaInicio: string;
   fechaFin: string;
   cliente: string;
-}
+}}
 
 export const contractsData: Contract[] = """ + json.dumps(contracts, indent=2, ensure_ascii=False) + """;
 """

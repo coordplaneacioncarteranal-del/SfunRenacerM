@@ -263,20 +263,9 @@ export default function App() {
               <p className={`text-sm font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
                 Origen de datos: <span className="font-mono text-xs">C:\Users\Coord Planeación\Documents\DASHBOARD SFUN\VIGENTES SFUN.xlsx</span>
               </p>
-              <p className={`text-xs mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                Última actualización: {new Date().toLocaleDateString('es-CO', { 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })}
-              </p>
             </div>
-            <div className={`text-xs px-4 py-2 rounded-lg ${
-              isDarkMode ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-100 text-blue-700'
-            }`}>
-              {filteredData.length} de {contractsData.length} contratos visualizados
+            <div className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+              Desarrollado para Coordinación de Planeación
             </div>
           </div>
         </div>

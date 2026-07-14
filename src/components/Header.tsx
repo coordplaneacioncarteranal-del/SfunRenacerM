@@ -1,4 +1,5 @@
-import { Moon, Sun, Building2 } from 'lucide-react';
+import { Moon, Sun } from 'lucide-react';
+import { lastUpdate } from '../data/contractsData';
 
 interface HeaderProps {
   isDarkMode: boolean;
@@ -29,6 +30,13 @@ export function Header({ isDarkMode, onToggleDarkMode }: HeaderProps) {
               <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
                 Contratos Vigentes - Coordinación de Planeación
               </p>
+              {lastUpdate && (
+                <p className={`text-xs mt-0.5 font-medium ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                  Última actualización de datos: {new Date(lastUpdate).toLocaleString('es-CO', { 
+                    year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+                  })}
+                </p>
+              )}
             </div>
           </div>
 
