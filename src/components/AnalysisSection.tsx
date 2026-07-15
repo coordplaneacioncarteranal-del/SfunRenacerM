@@ -1,13 +1,15 @@
+import React from 'react';
 import { LucideIcon } from 'lucide-react';
 import { BarChart, Bar, PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 
 interface AnalysisSectionProps {
   title: string;
   icon: LucideIcon;
-  data: Array<{ name: string; count: number; totalValue: number }>;
+  data: Array<{ name: string; count: number; totalValue: number; [key: string]: any }>;
   isDarkMode: boolean;
-  chartType: 'bar' | 'pie';
+  chartType: 'bar' | 'pie' | 'stacked-bar';
   colorScheme: 'default' | 'status' | 'management' | 'product';
+  stackedKeys?: string[];
 }
 
 export function AnalysisSection({ 
@@ -16,7 +18,8 @@ export function AnalysisSection({
   data, 
   isDarkMode, 
   chartType,
-  colorScheme 
+  colorScheme,
+  stackedKeys
 }: AnalysisSectionProps) {
   
   const getColorPalette = () => {
@@ -42,6 +45,10 @@ export function AnalysisSection({
     return `$${value.toLocaleString('es-CO')}`;
   };
 
+  const formatFullCurrency = (value: number): string => {
+    return value.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  };
+
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       return (
@@ -53,15 +60,33 @@ export function AnalysisSection({
           <p className={`font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
             {payload[0].payload.name}
           </p>
-          <p className={`text-sm ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-            Contratos: <span className="font-bold">{payload[0].payload.count}</span>
-          </p>
-          <p className={`text-sm ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-            Valor: <span className="font-bold">{formatCurrency(payload[0].payload.totalValue)}</span>
-          </p>
-          <p className={`text-xs mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-            {payload[0].payload.totalValue.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 })}
-          </p>
+          
+          {chartType === 'stacked-bar' ? (
+            <>
+              {payload.map((entry: any, index: number) => (
+                <p key={index} className={`text-sm ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                  <span style={{color: entry.color}}>{entry.name}</span>: <span className="font-bold">{entry.payload[`${entry.name}_count`] || 0} cont. ({formatCurrency(entry.value)})</span>
+                </p>
+              ))}
+              <div className={`mt-2 pt-2 border-t ${isDarkMode ? 'border-slate-700' : 'border-slate-200'}`}>
+                <p className={`text-sm ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                  Total Regional: <span className="font-bold">{formatCurrency(payload[0].payload.totalValue)}</span>
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className={`text-sm ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                Contratos: <span className="font-bold">{payload[0].payload.count}</span>
+              </p>
+              <p className={`text-sm ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                Valor: <span className="font-bold">{formatCurrency(payload[0].payload.totalValue)}</span>
+              </p>
+              <p className={`text-xs mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                {payload[0].payload.totalValue.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 })}
+              </p>
+            </>
+          )}
         </div>
       );
     }
@@ -104,7 +129,7 @@ export function AnalysisSection({
           <div className={`text-center py-12 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
             <p className="text-sm">No hay datos disponibles con los filtros actuales</p>
           </div>
-        ) : chartType === 'bar' ? (
+        ) : (chartType === 'bar' || chartType === 'stacked-bar') ? (
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={data}>
               <XAxis 
@@ -118,11 +143,20 @@ export function AnalysisSection({
                 tickFormatter={formatCurrency}
               />
               <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="totalValue" radius={[8, 8, 0, 0]}>
-                {data.map((_entry, index) => (
-                  <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
-                ))}
-              </Bar>
+              {chartType === 'stacked-bar' && stackedKeys ? (
+                <>
+                  <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+                  {stackedKeys.map((key, index) => (
+                    <Bar key={key} dataKey={key} stackId="a" fill={colors[index % colors.length]} />
+                  ))}
+                </>
+              ) : (
+                <Bar dataKey="totalValue" radius={[8, 8, 0, 0]}>
+                  {data.map((_entry, index) => (
+                    <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                  ))}
+                </Bar>
+              )}
             </BarChart>
           </ResponsiveContainer>
         ) : (
@@ -153,99 +187,219 @@ export function AnalysisSection({
 
       {/* Data Table */}
       <div className={`border-t ${isDarkMode ? 'border-slate-700' : 'border-slate-200'}`}>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className={isDarkMode ? 'bg-slate-900/50' : 'bg-slate-50'}>
-              <tr>
-                <th className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider ${
-                  isDarkMode ? 'text-slate-400' : 'text-slate-600'
-                }`}>
-                  Categoría
-                </th>
-                <th className={`px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider ${
-                  isDarkMode ? 'text-slate-400' : 'text-slate-600'
-                }`}>
-                  Contratos
-                </th>
-                <th className={`px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider ${
-                  isDarkMode ? 'text-slate-400' : 'text-slate-600'
-                }`}>
-                  Valor
-                </th>
-                <th className={`px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider ${
-                  isDarkMode ? 'text-slate-400' : 'text-slate-600'
-                }`}>
-                  % Total
-                </th>
-              </tr>
-            </thead>
-            <tbody className={`divide-y ${isDarkMode ? 'divide-slate-700' : 'divide-slate-200'}`}>
-              {data.map((item, index) => (
-                <tr 
-                  key={index}
-                  className={`transition-colors ${
-                    isDarkMode ? 'hover:bg-slate-700/50' : 'hover:bg-slate-50'
-                  }`}
-                >
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <div 
-                        className="w-3 h-3 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: colors[index % colors.length] }}
-                      />
-                      <span className={`text-sm font-medium ${
-                        isDarkMode ? 'text-slate-200' : 'text-slate-900'
-                      }`}>
-                        {item.name}
-                      </span>
-                    </div>
-                  </td>
-                  <td className={`px-4 py-3 text-right text-sm font-semibold ${
-                    isDarkMode ? 'text-slate-200' : 'text-slate-900'
+        {chartType === 'stacked-bar' && stackedKeys ? (
+          <div className="flex flex-col">
+            {/* Tabla 1: Cantidad de Contratos */}
+            <div className={`px-4 py-3 border-b font-semibold text-sm ${isDarkMode ? 'border-slate-700 text-slate-200 bg-slate-800/50' : 'border-slate-200 text-slate-700 bg-slate-50'}`}>
+              Cantidad de Contratos por Grupo Atraso
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className={isDarkMode ? 'bg-slate-900/50' : 'bg-slate-50'}>
+                  <tr>
+                    <th className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                      Categoría
+                    </th>
+                    {stackedKeys.map(k => (
+                      <th key={k} className={`px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                        {k}
+                      </th>
+                    ))}
+                    <th className={`px-4 py-3 text-center text-xs font-bold uppercase tracking-wider whitespace-nowrap ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                      TOTAL
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className={`divide-y ${isDarkMode ? 'divide-slate-700' : 'divide-slate-200'}`}>
+                  {data.map((item, index) => (
+                    <tr key={index} className={`transition-colors ${isDarkMode ? 'hover:bg-slate-700/50' : 'hover:bg-slate-50'}`}>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: colors[index % colors.length] }} />
+                          <span className={`text-sm font-medium ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{item.name}</span>
+                        </div>
+                      </td>
+                      {stackedKeys.map(k => (
+                        <td key={k} className={`px-4 py-3 text-center text-sm whitespace-nowrap ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                          {item[`${k}_count`] || 0}
+                        </td>
+                      ))}
+                      <td className={`px-4 py-3 text-center text-sm font-bold whitespace-nowrap ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                        {item.count}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className={`border-t-2 ${isDarkMode ? 'border-slate-600 bg-slate-900/50' : 'border-slate-300 bg-slate-50'}`}>
+                  <tr>
+                    <td className={`px-4 py-3 text-sm font-bold whitespace-nowrap ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>TOTAL</td>
+                    {stackedKeys.map(k => {
+                      const colTotal = data.reduce((sum, item) => sum + (item[`${k}_count`] || 0), 0);
+                      return (
+                        <td key={k} className={`px-4 py-3 text-center text-sm font-bold whitespace-nowrap ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                          {colTotal}
+                        </td>
+                      );
+                    })}
+                    <td className={`px-4 py-3 text-center text-sm font-bold whitespace-nowrap ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{totalCount}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            {/* Tabla 2: Valor Total */}
+            <div className={`px-4 py-3 border-y font-semibold text-sm ${isDarkMode ? 'border-slate-700 text-slate-200 bg-slate-800/50' : 'border-slate-200 text-slate-700 bg-slate-50'}`}>
+              Valor Total por Grupo Atraso
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className={isDarkMode ? 'bg-slate-900/50' : 'bg-slate-50'}>
+                  <tr>
+                    <th className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                      Categoría
+                    </th>
+                    {stackedKeys.map(k => (
+                      <th key={k} className={`px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                        {k}
+                      </th>
+                    ))}
+                    <th className={`px-4 py-3 text-center text-xs font-bold uppercase tracking-wider whitespace-nowrap ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                      TOTAL
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className={`divide-y ${isDarkMode ? 'divide-slate-700' : 'divide-slate-200'}`}>
+                  {data.map((item, index) => (
+                    <tr key={index} className={`transition-colors ${isDarkMode ? 'hover:bg-slate-700/50' : 'hover:bg-slate-50'}`}>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: colors[index % colors.length] }} />
+                          <span className={`text-sm font-medium ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{item.name}</span>
+                        </div>
+                      </td>
+                      {stackedKeys.map(k => (
+                        <td key={k} className={`px-4 py-3 text-center text-sm whitespace-nowrap ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                          {item[k] ? formatFullCurrency(item[k]) : '-'}
+                        </td>
+                      ))}
+                      <td className={`px-4 py-3 text-center text-sm font-bold whitespace-nowrap ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                        {formatFullCurrency(item.totalValue)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className={`border-t-2 ${isDarkMode ? 'border-slate-600 bg-slate-900/50' : 'border-slate-300 bg-slate-50'}`}>
+                  <tr>
+                    <td className={`px-4 py-3 text-sm font-bold whitespace-nowrap ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>TOTAL</td>
+                    {stackedKeys.map(k => {
+                      const colTotal = data.reduce((sum, item) => sum + (item[k] || 0), 0);
+                      return (
+                        <td key={k} className={`px-4 py-3 text-center text-sm font-bold whitespace-nowrap ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                          {colTotal ? formatFullCurrency(colTotal) : '-'}
+                        </td>
+                      );
+                    })}
+                    <td className={`px-4 py-3 text-center text-sm font-bold whitespace-nowrap ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{formatFullCurrency(totalValue)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className={isDarkMode ? 'bg-slate-900/50' : 'bg-slate-50'}>
+                <tr>
+                  <th className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider ${
+                    isDarkMode ? 'text-slate-400' : 'text-slate-600'
                   }`}>
-                    {item.count}
-                  </td>
-                  <td className={`px-4 py-3 text-right text-sm font-semibold ${
-                    isDarkMode ? 'text-slate-200' : 'text-slate-900'
+                    Categoría
+                  </th>
+                  <th className={`px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider ${
+                    isDarkMode ? 'text-slate-400' : 'text-slate-600'
                   }`}>
-                    {formatCurrency(item.totalValue)}
-                  </td>
-                  <td className={`px-4 py-3 text-right text-sm ${
-                    isDarkMode ? 'text-slate-300' : 'text-slate-600'
+                    Contratos
+                  </th>
+                  <th className={`px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider ${
+                    isDarkMode ? 'text-slate-400' : 'text-slate-600'
                   }`}>
-                    {((item.totalValue / totalValue) * 100).toFixed(1)}%
+                    Valor
+                  </th>
+                  <th className={`px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider ${
+                    isDarkMode ? 'text-slate-400' : 'text-slate-600'
+                  }`}>
+                    % Total
+                  </th>
+                </tr>
+              </thead>
+              <tbody className={`divide-y ${isDarkMode ? 'divide-slate-700' : 'divide-slate-200'}`}>
+                {data.map((item, index) => (
+                  <tr 
+                    key={index}
+                    className={`transition-colors ${
+                      isDarkMode ? 'hover:bg-slate-700/50' : 'hover:bg-slate-50'
+                    }`}
+                  >
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-3 h-3 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: colors[index % colors.length] }}
+                        />
+                        <span className={`text-sm font-medium ${
+                          isDarkMode ? 'text-slate-200' : 'text-slate-900'
+                        }`}>
+                          {item.name}
+                        </span>
+                      </div>
+                    </td>
+                    <td className={`px-4 py-3 text-right text-sm font-semibold ${
+                      isDarkMode ? 'text-slate-200' : 'text-slate-900'
+                    }`}>
+                      {item.count}
+                    </td>
+                    <td className={`px-4 py-3 text-right text-sm font-semibold ${
+                      isDarkMode ? 'text-slate-200' : 'text-slate-900'
+                    }`}>
+                      {formatCurrency(item.totalValue)}
+                    </td>
+                    <td className={`px-4 py-3 text-right text-sm ${
+                      isDarkMode ? 'text-slate-300' : 'text-slate-600'
+                    }`}>
+                      {((item.totalValue / totalValue) * 100).toFixed(1)}%
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot className={`border-t-2 ${
+                isDarkMode ? 'border-slate-600 bg-slate-900/50' : 'border-slate-300 bg-slate-50'
+              }`}>
+                <tr>
+                  <td className={`px-4 py-3 text-sm font-bold ${
+                    isDarkMode ? 'text-white' : 'text-slate-900'
+                  }`}>
+                    TOTAL
+                  </td>
+                  <td className={`px-4 py-3 text-right text-sm font-bold ${
+                    isDarkMode ? 'text-white' : 'text-slate-900'
+                  }`}>
+                    {totalCount}
+                  </td>
+                  <td className={`px-4 py-3 text-right text-sm font-bold ${
+                    isDarkMode ? 'text-white' : 'text-slate-900'
+                  }`}>
+                    {formatCurrency(totalValue)}
+                  </td>
+                  <td className={`px-4 py-3 text-right text-sm font-bold ${
+                    isDarkMode ? 'text-white' : 'text-slate-900'
+                  }`}>
+                    100%
                   </td>
                 </tr>
-              ))}
-            </tbody>
-            <tfoot className={`border-t-2 ${
-              isDarkMode ? 'border-slate-600 bg-slate-900/50' : 'border-slate-300 bg-slate-50'
-            }`}>
-              <tr>
-                <td className={`px-4 py-3 text-sm font-bold ${
-                  isDarkMode ? 'text-white' : 'text-slate-900'
-                }`}>
-                  TOTAL
-                </td>
-                <td className={`px-4 py-3 text-right text-sm font-bold ${
-                  isDarkMode ? 'text-white' : 'text-slate-900'
-                }`}>
-                  {totalCount}
-                </td>
-                <td className={`px-4 py-3 text-right text-sm font-bold ${
-                  isDarkMode ? 'text-white' : 'text-slate-900'
-                }`}>
-                  {formatCurrency(totalValue)}
-                </td>
-                <td className={`px-4 py-3 text-right text-sm font-bold ${
-                  isDarkMode ? 'text-white' : 'text-slate-900'
-                }`}>
-                  100%
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+              </tfoot>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

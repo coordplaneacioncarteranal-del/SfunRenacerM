@@ -16,6 +16,7 @@ export default function App() {
   const [selectedProducto, setSelectedProducto] = useState<string[]>(['Renacer Mascotas']);
   const [selectedTipo, setSelectedTipo] = useState<string[]>([]);
   const [selectedRegional, setSelectedRegional] = useState<string[]>([]);
+  const [selectedGrupoAtraso, setSelectedGrupoAtraso] = useState<string[]>([]);
 
   // Extraer valores únicos para los filtros
   const filterOptions = useMemo(() => ({
@@ -25,6 +26,7 @@ export default function App() {
     producto: Array.from(new Set(contractsData.map(c => c.producto))).sort(),
     tipo: Array.from(new Set(contractsData.map(c => c.tipo))).sort(),
     regional: Array.from(new Set(contractsData.map(c => (c as any).regional))).sort(),
+    grupoAtraso: Array.from(new Set(contractsData.map(c => c.grupoAtraso))).sort(),
   }), []);
 
   // Filtrar datos según selección
@@ -42,10 +44,12 @@ export default function App() {
         selectedTipo.includes(contract.tipo);
       const matchRegional = selectedRegional.length === 0 || 
         selectedRegional.includes((contract as any).regional);
+      const matchGrupoAtraso = selectedGrupoAtraso.length === 0 || 
+        selectedGrupoAtraso.includes(contract.grupoAtraso);
       
-      return matchProductoProvision && matchEstadoVenta && matchEstadoProvision && matchProducto && matchTipo && matchRegional;
+      return matchProductoProvision && matchEstadoVenta && matchEstadoProvision && matchProducto && matchTipo && matchRegional && matchGrupoAtraso;
     });
-  }, [selectedProductoProvision, selectedEstadoVenta, selectedEstadoProvision, selectedProducto, selectedTipo, selectedRegional]);
+  }, [selectedProductoProvision, selectedEstadoVenta, selectedEstadoProvision, selectedProducto, selectedTipo, selectedRegional, selectedGrupoAtraso]);
 
   // KPIs globales
   const globalMetrics = useMemo(() => {
@@ -143,18 +147,43 @@ export default function App() {
   const analysisByRegional = useMemo(() => {
     const grouped = filteredData.reduce((acc, contract) => {
       const key = (contract as any).regional;
+      let atrasoKey = contract.grupoAtraso;
+      if (atrasoKey === 'ATRASO DE 1 A 10' || atrasoKey === 'ANTICIPADO DE -10 A 0') {
+        atrasoKey = 'Al día';
+      } else if (atrasoKey === 'ADELANTADO') {
+        atrasoKey = 'Adelantados';
+      }
+
       if (!acc[key]) {
         acc[key] = { count: 0, totalValue: 0 };
       }
       acc[key].count += 1;
       acc[key].totalValue += contract.valorTotalContrato;
+      
+      if (!acc[key][atrasoKey]) {
+        acc[key][atrasoKey] = 0;
+        acc[key][`${atrasoKey}_count`] = 0;
+      }
+      acc[key][atrasoKey] += contract.valorTotalContrato;
+      acc[key][`${atrasoKey}_count`] += 1;
+
       return acc;
-    }, {} as Record<string, { count: number; totalValue: number }>);
+    }, {} as Record<string, any>);
 
     return Object.entries(grouped)
       .map(([name, data]) => ({ name, ...data }))
       .sort((a, b) => b.totalValue - a.totalValue);
   }, [filteredData]);
+
+  const regionalStackedKeys = useMemo(() => {
+    const keys = new Set<string>();
+    analysisByRegional.forEach(item => {
+      Object.keys(item).forEach(k => {
+        if (k !== 'name' && k !== 'count' && k !== 'totalValue' && !k.endsWith('_count')) keys.add(k);
+      });
+    });
+    return Array.from(keys);
+  }, [analysisByRegional]);
 
   const handleReset = () => {
     setSelectedProductoProvision([]);
@@ -163,6 +192,7 @@ export default function App() {
     setSelectedProducto(['Renacer Mascotas']);
     setSelectedTipo([]);
     setSelectedRegional([]);
+    setSelectedGrupoAtraso([]);
   };
 
   return (
@@ -195,6 +225,8 @@ export default function App() {
               setSelectedTipo={setSelectedTipo}
               selectedRegional={selectedRegional}
               setSelectedRegional={setSelectedRegional}
+              selectedGrupoAtraso={selectedGrupoAtraso}
+              setSelectedGrupoAtraso={setSelectedGrupoAtraso}
               onReset={handleReset}
             />
           </div>
@@ -204,8 +236,21 @@ export default function App() {
             {/* KPIs Globales */}
             <MetricsGrid metrics={globalMetrics} isDarkMode={isDarkMode} />
 
-        {/* Grid de Análisis */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+            {/* Análisis por Regional (Full Width below KPIs) */}
+            <div className="mt-2">
+              <AnalysisSection
+                title="Análisis por Regional y Grupo Atraso"
+                icon={MapPin}
+                data={analysisByRegional}
+                isDarkMode={isDarkMode}
+                chartType="stacked-bar"
+                colorScheme="default"
+                stackedKeys={regionalStackedKeys}
+              />
+            </div>
+
+            {/* Grid de Análisis (Otros gráficos) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-2">
           <AnalysisSection
             title="Análisis por Atraso"
             icon={AlertCircle}
@@ -240,15 +285,6 @@ export default function App() {
             isDarkMode={isDarkMode}
             chartType="pie"
             colorScheme="product"
-          />
-          
-          <AnalysisSection
-            title="Análisis por Regional"
-            icon={MapPin}
-            data={analysisByRegional}
-            isDarkMode={isDarkMode}
-            chartType="bar"
-            colorScheme="default"
           />
         </div>
 

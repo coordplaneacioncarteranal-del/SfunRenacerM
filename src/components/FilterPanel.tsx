@@ -21,6 +21,8 @@ interface FilterPanelProps {
   setSelectedTipo: (value: string[]) => void;
   selectedRegional: string[];
   setSelectedRegional: (value: string[]) => void;
+  selectedGrupoAtraso: string[];
+  setSelectedGrupoAtraso: (value: string[]) => void;
   onReset: () => void;
 }
 
@@ -39,6 +41,8 @@ export function FilterPanel({
   setSelectedTipo,
   selectedRegional,
   setSelectedRegional,
+  selectedGrupoAtraso,
+  setSelectedGrupoAtraso,
   onReset,
 }: FilterPanelProps) {
   const hasActiveFilters = 
@@ -47,7 +51,8 @@ export function FilterPanel({
     selectedEstadoProvision.length > 0 ||
     selectedProducto.length > 0 ||
     selectedTipo.length > 0 ||
-    selectedRegional.length > 0;
+    selectedRegional.length > 0 ||
+    selectedGrupoAtraso.length > 0;
 
   return (
     <div className={`p-6 rounded-xl border backdrop-blur-sm transition-all duration-300 ${
@@ -131,6 +136,14 @@ export function FilterPanel({
           options={filterOptions.regional}
           selected={selectedRegional}
           onChange={setSelectedRegional}
+          isDarkMode={isDarkMode}
+        />
+
+        <MultiSelect
+          label="Grupo Atraso"
+          options={filterOptions.grupoAtraso}
+          selected={selectedGrupoAtraso}
+          onChange={setSelectedGrupoAtraso}
           isDarkMode={isDarkMode}
         />
       </div>
