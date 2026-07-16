@@ -76,12 +76,7 @@ export default function App() {
   // Análisis por categorías
   const analysisByAtraso = useMemo(() => {
     const grouped = filteredData.reduce((acc, contract) => {
-      let key = contract.grupoAtraso;
-      if (key === 'ATRASO DE 1 A 10' || key === 'ANTICIPADO DE -10 A 0') {
-        key = 'Al día';
-      } else if (key === 'ADELANTADO') {
-        key = 'Adelantados';
-      }
+      const key = contract.grupoAtraso;
       
       if (!acc[key]) {
         acc[key] = { count: 0, totalValue: 0 };
@@ -147,12 +142,7 @@ export default function App() {
   const analysisByRegional = useMemo(() => {
     const grouped = filteredData.reduce((acc, contract) => {
       const key = (contract as any).regional;
-      let atrasoKey = contract.grupoAtraso;
-      if (atrasoKey === 'ATRASO DE 1 A 10' || atrasoKey === 'ANTICIPADO DE -10 A 0') {
-        atrasoKey = 'Al día';
-      } else if (atrasoKey === 'ADELANTADO') {
-        atrasoKey = 'Adelantados';
-      }
+      const atrasoKey = contract.grupoAtraso;
 
       if (!acc[key]) {
         acc[key] = { count: 0, totalValue: 0 };
