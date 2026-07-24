@@ -1,6 +1,6 @@
 // Datos generados automáticamente desde el Excel "VIGENTES SFUN.xlsx"
 
-export const lastUpdate = "2026-07-22T09:26:03";
+export const lastUpdate = "2026-07-23T22:07:50";
 
 export interface Contract {
   id: string;
