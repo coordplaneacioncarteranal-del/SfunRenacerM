@@ -3,6 +3,8 @@ import { contractsData } from './data/contractsData';
 import { FilterPanel } from './components/FilterPanel';
 import { MetricsGrid } from './components/MetricsGrid';
 import { AnalysisSection } from './components/AnalysisSection';
+import { MapSection } from './components/MapSection';
+import { AlertsSection } from './components/AlertsSection';
 import { Header } from './components/Header';
 import { BarChart3, TrendingUp, AlertCircle, DollarSign, MapPin } from 'lucide-react';
 
@@ -17,6 +19,9 @@ export default function App() {
   const [selectedTipo, setSelectedTipo] = useState<string[]>([]);
   const [selectedRegional, setSelectedRegional] = useState<string[]>([]);
   const [selectedGrupoAtraso, setSelectedGrupoAtraso] = useState<string[]>([]);
+
+  // Estado para las pestañas
+  const [activeTab, setActiveTab] = useState<'analisis' | 'alertas' | 'mapa'>('analisis');
 
   // Extraer valores únicos para los filtros
   const filterOptions = useMemo(() => ({
@@ -223,59 +228,115 @@ export default function App() {
 
           {/* Contenido Principal */}
           <div className="w-full lg:w-3/4 flex flex-col gap-6">
-            {/* KPIs Globales */}
-            <MetricsGrid metrics={globalMetrics} isDarkMode={isDarkMode} />
-
-            {/* Análisis por Regional (Full Width below KPIs) */}
-            <div className="mt-2">
-              <AnalysisSection
-                title="Análisis por Regional y Grupo Atraso"
-                icon={MapPin}
-                data={analysisByRegional}
-                isDarkMode={isDarkMode}
-                chartType="stacked-bar"
-                colorScheme="default"
-                stackedKeys={regionalStackedKeys}
-              />
+            
+            {/* Pestañas de Navegación */}
+            <div className={`flex border-b ${isDarkMode ? 'border-slate-700' : 'border-slate-200'}`}>
+              <button 
+                onClick={() => setActiveTab('analisis')}
+                className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors flex items-center gap-2 ${
+                  activeTab === 'analisis' 
+                    ? 'border-blue-500 text-blue-500' 
+                    : isDarkMode ? 'border-transparent text-slate-400 hover:text-slate-200' : 'border-transparent text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                <BarChart3 size={16} />
+                Análisis de Datos
+              </button>
+              <button 
+                onClick={() => setActiveTab('alertas')}
+                className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors flex items-center gap-2 ${
+                  activeTab === 'alertas' 
+                    ? 'border-blue-500 text-blue-500' 
+                    : isDarkMode ? 'border-transparent text-slate-400 hover:text-slate-200' : 'border-transparent text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                <AlertCircle size={16} />
+                Semaforización Alertas
+              </button>
+              <button 
+                onClick={() => setActiveTab('mapa')}
+                className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors flex items-center gap-2 ${
+                  activeTab === 'mapa' 
+                    ? 'border-blue-500 text-blue-500' 
+                    : isDarkMode ? 'border-transparent text-slate-400 hover:text-slate-200' : 'border-transparent text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                <MapPin size={16} />
+                Visor Geográfico
+              </button>
             </div>
 
-            {/* Grid de Análisis (Otros gráficos) */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-2">
-          <AnalysisSection
-            title="Análisis por Atraso"
-            icon={AlertCircle}
-            data={analysisByAtraso}
-            isDarkMode={isDarkMode}
-            chartType="bar"
-            colorScheme="status"
-          />
-          
-          <AnalysisSection
-            title="Análisis por Tipo"
-            icon={BarChart3}
-            data={analysisByTipo}
-            isDarkMode={isDarkMode}
-            chartType="pie"
-            colorScheme="default"
-          />
-          
-          <AnalysisSection
-            title="Análisis por Gestión"
-            icon={TrendingUp}
-            data={analysisByGestion}
-            isDarkMode={isDarkMode}
-            chartType="bar"
-            colorScheme="management"
-          />
-          
-          <AnalysisSection
-            title="Análisis por Producto"
-            icon={DollarSign}
-            data={analysisByProducto}
-            isDarkMode={isDarkMode}
-            chartType="pie"
-            colorScheme="product"
-          />
+            {/* KPIs Globales (Visibles en ambas pestañas) */}
+            <MetricsGrid metrics={globalMetrics} isDarkMode={isDarkMode} />
+
+            {activeTab === 'analisis' && (
+              <>
+                {/* Análisis por Regional */}
+                <div className="mt-2">
+                  <AnalysisSection
+                    title="Análisis por Regional y Grupo Atraso"
+                    icon={MapPin}
+                    data={analysisByRegional}
+                    isDarkMode={isDarkMode}
+                    chartType="stacked-bar"
+                    colorScheme="default"
+                    stackedKeys={regionalStackedKeys}
+                  />
+                </div>
+
+                {/* Grid de Análisis (Otros gráficos) */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-2">
+                  <AnalysisSection
+                    title="Análisis por Atraso"
+                    icon={AlertCircle}
+                    data={analysisByAtraso}
+                    isDarkMode={isDarkMode}
+                    chartType="bar"
+                    colorScheme="status"
+                  />
+                  
+                  <AnalysisSection
+                    title="Análisis por Tipo"
+                    icon={BarChart3}
+                    data={analysisByTipo}
+                    isDarkMode={isDarkMode}
+                    chartType="pie"
+                    colorScheme="default"
+                  />
+                  
+                  <AnalysisSection
+                    title="Análisis por Gestión"
+                    icon={TrendingUp}
+                    data={analysisByGestion}
+                    isDarkMode={isDarkMode}
+                    chartType="bar"
+                    colorScheme="management"
+                  />
+                  
+                  <AnalysisSection
+                    title="Análisis por Producto"
+                    icon={DollarSign}
+                    data={analysisByProducto}
+                    isDarkMode={isDarkMode}
+                    chartType="pie"
+                    colorScheme="product"
+                  />
+                </div>
+              </>
+            )}
+
+            {activeTab === 'alertas' && (
+              <div className="mt-2 animate-in fade-in duration-500">
+                <AlertsSection data={filteredData} isDarkMode={isDarkMode} />
+              </div>
+            )}
+
+            {activeTab === 'mapa' && (
+              <div className="mt-2 animate-in fade-in duration-500">
+                <MapSection data={filteredData} isDarkMode={isDarkMode} />
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Footer con información del dataset */}
@@ -294,8 +355,6 @@ export default function App() {
               Desarrollado para Coordinación de Planeación
             </div>
           </div>
-        </div>
-        </div>
         </div>
       </main>
     </div>

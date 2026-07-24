@@ -60,6 +60,9 @@ col_regional = find_col(['Regional'])
 col_fecha_inicio = find_col(['Fecha de Inicio', 'Inicio Vigencia'])
 col_fecha_fin = find_col(['Fecha Renovaci', 'Hasta'])
 col_cliente = find_col(['Contratante', 'Cliente'])
+col_direccion = find_col(['Dirección', 'Direccion'])
+col_latitud = find_col(['Latitud', 'latitud'])
+col_longitud = find_col(['longitud', 'Longitud'])
 
 contracts = []
 for index, row in df.iterrows():
@@ -79,7 +82,10 @@ for index, row in df.iterrows():
         "contratoActivo": estado_venta_val.lower() == 'activo',
         "fechaInicio": clean_date(row.get(col_fecha_inicio, "")),
         "fechaFin": clean_date(row.get(col_fecha_fin, "")),
-        "cliente": clean_string(row.get(col_cliente, ""))
+        "cliente": clean_string(row.get(col_cliente, "")),
+        "direccion": clean_string(row.get(col_direccion, "")),
+        "latitud": clean_float(row.get(col_latitud, 0)),
+        "longitud": clean_float(row.get(col_longitud, 0))
     }
     contracts.append(contract)
 
@@ -104,6 +110,9 @@ export interface Contract {{
   fechaInicio: string;
   fechaFin: string;
   cliente: string;
+  direccion: string;
+  latitud: number;
+  longitud: number;
 }}
 
 export const contractsData: Contract[] = """ + json.dumps(contracts, indent=2, ensure_ascii=False) + """;
