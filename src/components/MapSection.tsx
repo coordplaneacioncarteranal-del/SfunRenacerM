@@ -12,7 +12,7 @@ export function MapSection({ data, isDarkMode }: MapSectionProps) {
   const mapInstanceRef = useRef<any>(null);
   const markersLayerRef = useRef<any>(null);
 
-  // Filtramos solo aquellos que tienen coordenadas numéricas válidas
+  // Filtramos solo aquellos que tienen coordenadas numericas validas
   const validData = useMemo(() => {
     return data.filter(c => 
       c.latitud !== undefined && 
@@ -79,7 +79,7 @@ export function MapSection({ data, isDarkMode }: MapSectionProps) {
     if (markersLayerRef.current) {
       markersLayerRef.current.clearLayers();
       
-      // Corrección de icono por defecto por si acaso
+      // Correccion de icono por defecto por si acaso
       const customIcon = L.icon({
         iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
         iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
@@ -94,7 +94,7 @@ export function MapSection({ data, isDarkMode }: MapSectionProps) {
         const popupContent = `
           <div style="font-size: 13px; min-width: 200px;">
             <p style="font-weight: bold; margin-bottom: 4px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">${contract.cliente || 'Sin nombre'}</p>
-            <p style="margin: 4px 0;"><strong>Dirección:</strong> ${contract.direccion || 'No disponible'}</p>
+            <p style="margin: 4px 0;"><strong>Direccion:</strong> ${contract.direccion || 'No disponible'}</p>
             <p style="margin: 4px 0;"><strong>Regional:</strong> ${contract.regional}</p>
             <p style="margin: 4px 0;"><strong>Estado:</strong> ${contract.grupoAtraso}</p>
             <p style="margin-top: 8px; font-weight: bold; color: #2563eb; background-color: #eff6ff; padding: 6px; border-radius: 4px;">
@@ -127,10 +127,10 @@ export function MapSection({ data, isDarkMode }: MapSectionProps) {
           <h2 className={`text-xl font-bold ${
             isDarkMode ? 'text-white' : 'text-slate-900'
           }`}>
-            Visor Geográfico
+            Visor Geografico
           </h2>
           <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-            Ubicación regional de contratos
+            Ubicacion regional de contratos
           </p>
         </div>
       </div>

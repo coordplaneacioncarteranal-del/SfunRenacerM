@@ -78,7 +78,7 @@ export default function App() {
     };
   }, [filteredData]);
 
-  // Análisis por categorías
+  // Analisis por categorías
   const analysisByAtraso = useMemo(() => {
     const grouped = filteredData.reduce((acc, contract) => {
       const key = contract.grupoAtraso;
@@ -240,7 +240,7 @@ export default function App() {
                 }`}
               >
                 <BarChart3 size={16} />
-                Análisis de Datos
+                Analisis de Datos
               </button>
               <button 
                 onClick={() => setActiveTab('alertas')}
@@ -251,7 +251,7 @@ export default function App() {
                 }`}
               >
                 <AlertCircle size={16} />
-                Semaforización Alertas
+                Semaforizacion Alertas
               </button>
               <button 
                 onClick={() => setActiveTab('mapa')}
@@ -262,7 +262,7 @@ export default function App() {
                 }`}
               >
                 <MapPin size={16} />
-                Visor Geográfico
+                Visor Geografico
               </button>
             </div>
 
@@ -271,10 +271,10 @@ export default function App() {
 
             {activeTab === 'analisis' && (
               <>
-                {/* Análisis por Regional */}
+                {/* Analisis por Regional */}
                 <div className="mt-2">
                   <AnalysisSection
-                    title="Análisis por Regional y Grupo Atraso"
+                    title="Analisis por Regional y Grupo Atraso"
                     icon={MapPin}
                     data={analysisByRegional}
                     isDarkMode={isDarkMode}
@@ -284,10 +284,10 @@ export default function App() {
                   />
                 </div>
 
-                {/* Grid de Análisis (Otros gráficos) */}
+                {/* Grid de Analisis (Otros gráficos) */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-2">
                   <AnalysisSection
-                    title="Análisis por Atraso"
+                    title="Analisis por Atraso"
                     icon={AlertCircle}
                     data={analysisByAtraso}
                     isDarkMode={isDarkMode}
@@ -296,7 +296,7 @@ export default function App() {
                   />
                   
                   <AnalysisSection
-                    title="Análisis por Tipo"
+                    title="Analisis por Tipo"
                     icon={BarChart3}
                     data={analysisByTipo}
                     isDarkMode={isDarkMode}
@@ -305,7 +305,7 @@ export default function App() {
                   />
                   
                   <AnalysisSection
-                    title="Análisis por Gestión"
+                    title="Analisis por Gestion"
                     icon={TrendingUp}
                     data={analysisByGestion}
                     isDarkMode={isDarkMode}
@@ -314,7 +314,7 @@ export default function App() {
                   />
                   
                   <AnalysisSection
-                    title="Análisis por Producto"
+                    title="Analisis por Producto"
                     icon={DollarSign}
                     data={analysisByProducto}
                     isDarkMode={isDarkMode}
@@ -348,11 +348,11 @@ export default function App() {
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
               <p className={`text-sm font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-                Origen de datos: <span className="font-mono text-xs">C:\Users\Coord Planeación\Documents\DASHBOARD SFUN\VIGENTES SFUN.xlsx</span>
+                Origen de datos: <span className="font-mono text-xs">C:\Users\Coord Planeacion\Documents\DASHBOARD SFUN\VIGENTES SFUN.xlsx</span>
               </p>
             </div>
             <div className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-              Desarrollado para Coordinación de Planeación
+              Desarrollado para Coordinación de Planeacion
             </div>
           </div>
         </div>

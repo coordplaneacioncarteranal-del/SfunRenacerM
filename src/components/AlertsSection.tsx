@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Contract } from '../data/contractsData';
 import { AlertCircle, AlertTriangle, Info } from 'lucide-react';
 
@@ -119,7 +119,7 @@ export function AlertsSection({ data, isDarkMode }: AlertsSectionProps) {
     }`}>
       <div className="mb-6">
         <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-          Semaforización de Alertas
+          Semaforizacion de Alertas
         </h2>
         <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
           Top 3 Regionales a atacar por nivel de atraso y canal de cobro.
@@ -148,7 +148,7 @@ export function AlertsSection({ data, isDarkMode }: AlertsSectionProps) {
             )}
             
             {renderCard(
-              "CRÍTICA (>90)", 
+              "CRITICA (>90)", 
               processCell(canal.key, criticaKeys), 
               "red"
             )}
