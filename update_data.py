@@ -55,6 +55,7 @@ col_producto = 'PRODUCTO' if 'PRODUCTO' in cols else find_col(['PRODUCTO'])
 col_grupo_atraso = find_col(['grupo atraso'])
 col_tipo = 'tipo' if 'tipo' in cols else find_col(['tipo'])
 col_gestion = find_col(['GESTION'])
+col_grupo_cobro = find_col(['Grupo de cobro'])
 col_valor = find_col(['Valor total del contrato'])
 col_regional = find_col(['Regional'])
 col_fecha_inicio = find_col(['Fecha de Inicio', 'Inicio Vigencia'])
@@ -77,6 +78,7 @@ for index, row in df.iterrows():
         "grupoAtraso": clean_string(row.get(col_grupo_atraso, "")),
         "tipo": clean_string(row.get(col_tipo, "")),
         "gestion": clean_string(row.get(col_gestion, "")),
+        "grupoCobro": clean_string(row.get(col_grupo_cobro, "")),
         "regional": "BOGOTA" if "bogota" in clean_string(row.get(col_regional, "")).lower() else clean_string(row.get(col_regional, "")),
         "valorTotalContrato": clean_float(row.get(col_valor, 0)),
         "contratoActivo": estado_venta_val.lower() == 'activo',
@@ -88,6 +90,34 @@ for index, row in df.iterrows():
         "longitud": clean_float(row.get(col_longitud, 0))
     }
     contracts.append(contract)
+
+# Load PRESUPUESTO
+budget_data = []
+try:
+    df_presupuesto = pd.read_excel('VIGENTES SFUN.xlsx', sheet_name='PRESUPUESTO')
+    regional_map = {
+        'VCENTRO': 'VALLE CENTRO',
+        'VNORTE': 'VALLE NORTE',
+        'VSUR': 'VALLE SUR',
+        'TOLNORTE': 'TOLIMA NORTE',
+        'TOLSUR': 'TOLIMA SUR',
+        'VSUPALMIRA': 'Valle Sur Palmira'
+    }
+    
+    for index, row in df_presupuesto.iterrows():
+        reg = clean_string(row.get('REGIONAL', ''))
+        reg = regional_map.get(reg, reg)
+        if 'bogota' in reg.lower():
+            reg = 'BOGOTA'
+            
+        budget_data.append({
+            "regional": reg,
+            "presupuesto": clean_float(row.get('PRESUPUESTO', 0)),
+            "recaudo": clean_float(row.get('RECAUDO', 0)),
+            "cumplimiento": clean_float(row.get('CUMPLIMIENTO', 0))
+        })
+except Exception as e:
+    print(f"Nota: No se pudo cargar o procesar la hoja PRESUPUESTO: {e}")
 
 now = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
 
@@ -104,6 +134,7 @@ export interface Contract {{
   grupoAtraso: string;
   tipo: string;
   gestion: string;
+  grupoCobro: string;
   regional: string;
   valorTotalContrato: number;
   contratoActivo: boolean;
@@ -115,7 +146,16 @@ export interface Contract {{
   longitud: number;
 }}
 
+export interface Budget {{
+  regional: string;
+  presupuesto: number;
+  recaudo: number;
+  cumplimiento: number;
+}}
+
 export const contractsData: Contract[] = """ + json.dumps(contracts, indent=2, ensure_ascii=False) + """;
+
+export const budgetData: Budget[] = """ + json.dumps(budget_data, indent=2, ensure_ascii=False) + """;
 """
 
 with open('src/data/contractsData.ts', 'w', encoding='utf-8') as f:

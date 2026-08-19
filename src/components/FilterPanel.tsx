@@ -8,6 +8,11 @@ interface FilterPanelProps {
     estadoVenta: string[];
     estadoProvision: string[];
     producto: string[];
+    tipo: string[];
+    regional: string[];
+    grupoAtraso: string[];
+    gestion: string[];
+    grupoCobro: string[];
   };
   selectedProductoProvision: string[];
   setSelectedProductoProvision: (value: string[]) => void;
@@ -23,6 +28,10 @@ interface FilterPanelProps {
   setSelectedRegional: (value: string[]) => void;
   selectedGrupoAtraso: string[];
   setSelectedGrupoAtraso: (value: string[]) => void;
+  selectedGestion: string[];
+  setSelectedGestion: (value: string[]) => void;
+  selectedGrupoCobro: string[];
+  setSelectedGrupoCobro: (value: string[]) => void;
   onReset: () => void;
 }
 
@@ -43,6 +52,10 @@ export function FilterPanel({
   setSelectedRegional,
   selectedGrupoAtraso,
   setSelectedGrupoAtraso,
+  selectedGestion,
+  setSelectedGestion,
+  selectedGrupoCobro,
+  setSelectedGrupoCobro,
   onReset,
 }: FilterPanelProps) {
   const hasActiveFilters = 
@@ -52,7 +65,9 @@ export function FilterPanel({
     selectedProducto.length > 0 ||
     selectedTipo.length > 0 ||
     selectedRegional.length > 0 ||
-    selectedGrupoAtraso.length > 0;
+    selectedGrupoAtraso.length > 0 ||
+    selectedGestion.length > 0 ||
+    selectedGrupoCobro.length > 0;
 
   return (
     <div className={`p-6 rounded-xl border backdrop-blur-sm transition-all duration-300 ${
@@ -144,6 +159,22 @@ export function FilterPanel({
           options={filterOptions.grupoAtraso}
           selected={selectedGrupoAtraso}
           onChange={setSelectedGrupoAtraso}
+          isDarkMode={isDarkMode}
+        />
+        
+        <MultiSelect
+          label="Gestión"
+          options={filterOptions.gestion}
+          selected={selectedGestion}
+          onChange={setSelectedGestion}
+          isDarkMode={isDarkMode}
+        />
+        
+        <MultiSelect
+          label="Grupo de Cobro"
+          options={filterOptions.grupoCobro}
+          selected={selectedGrupoCobro}
+          onChange={setSelectedGrupoCobro}
           isDarkMode={isDarkMode}
         />
       </div>

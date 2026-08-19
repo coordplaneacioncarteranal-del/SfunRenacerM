@@ -1,5 +1,5 @@
-import React from 'react';
-import { LucideIcon } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { LucideIcon, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { BarChart, Bar, PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 
 interface AnalysisSectionProps {
@@ -22,6 +22,57 @@ export function AnalysisSection({
   stackedKeys
 }: AnalysisSectionProps) {
   
+  const [activeTab, setActiveTab] = useState<'clientes' | 'valor'>('valor');
+  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
+
+  const handleSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'desc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'desc') {
+      direction = 'asc';
+    } else if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      setSortConfig(null);
+      return;
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const sortedData = useMemo(() => {
+    let sortableItems = [...data];
+    if (sortConfig !== null) {
+      sortableItems.sort((a, b) => {
+        let valA = a[sortConfig.key];
+        let valB = b[sortConfig.key];
+        
+        if (valA === undefined || valA === null) valA = 0;
+        if (valB === undefined || valB === null) valB = 0;
+
+        if (typeof valA === 'string' && typeof valB === 'string') {
+          return sortConfig.direction === 'asc' 
+            ? valA.localeCompare(valB) 
+            : valB.localeCompare(valA);
+        }
+
+        if (valA < valB) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (valA > valB) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [data, sortConfig]);
+
+  const renderSortIcon = (key: string) => {
+    if (!sortConfig || sortConfig.key !== key) {
+      return <ArrowUpDown className="w-3 h-3 ml-1 opacity-40 inline-block" />;
+    }
+    return sortConfig.direction === 'asc' 
+      ? <ArrowUp className="w-3 h-3 ml-1 text-blue-500 inline-block" />
+      : <ArrowDown className="w-3 h-3 ml-1 text-blue-500 inline-block" />;
+  };
+
   const getColorPalette = () => {
     const palettes = {
       default: ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4'],
@@ -65,12 +116,12 @@ export function AnalysisSection({
             <>
               {payload.map((entry: any, index: number) => (
                 <p key={index} className={`text-sm ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-                  <span style={{color: entry.color}}>{entry.name}</span>: <span className="font-bold">{entry.payload[`${entry.name}_count`] || 0} cont. ({formatCurrency(entry.value)})</span>
+                  <span style={{color: entry.color}}>{entry.name.replace('_count', '')}</span>: <span className="font-bold">{activeTab === 'clientes' ? entry.value : formatCurrency(entry.value)}</span>
                 </p>
               ))}
               <div className={`mt-2 pt-2 border-t ${isDarkMode ? 'border-slate-700' : 'border-slate-200'}`}>
                 <p className={`text-sm ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-                  Total Regional: <span className="font-bold">{formatCurrency(payload[0].payload.totalValue)}</span>
+                  Total Regional: <span className="font-bold">{activeTab === 'clientes' ? payload[0].payload.count : formatCurrency(payload[0].payload.totalValue)}</span>
                 </p>
               </div>
             </>
@@ -120,6 +171,30 @@ export function AnalysisSection({
               </p>
             </div>
           </div>
+          {chartType === 'stacked-bar' && (
+            <div className="flex bg-slate-200/50 dark:bg-slate-800 rounded-lg p-1">
+              <button
+                onClick={() => setActiveTab('valor')}
+                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  activeTab === 'valor'
+                    ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                }`}
+              >
+                Valor Total
+              </button>
+              <button
+                onClick={() => setActiveTab('clientes')}
+                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  activeTab === 'clientes'
+                    ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                }`}
+              >
+                Clientes / Contratos
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -140,14 +215,14 @@ export function AnalysisSection({
               <YAxis 
                 tick={{ fill: isDarkMode ? '#94a3b8' : '#64748b', fontSize: 12 }}
                 axisLine={{ stroke: isDarkMode ? '#475569' : '#cbd5e1' }}
-                tickFormatter={formatCurrency}
+                tickFormatter={activeTab === 'clientes' ? (val) => val : formatCurrency}
               />
               <Tooltip content={<CustomTooltip />} />
               {chartType === 'stacked-bar' && stackedKeys ? (
                 <>
                   <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
                   {stackedKeys.map((key, index) => (
-                    <Bar key={key} dataKey={key} stackId="a" fill={colors[index % colors.length]} />
+                    <Bar key={key} dataKey={activeTab === 'clientes' ? `${key}_count` : key} stackId="a" fill={colors[index % colors.length]} name={key} />
                   ))}
                 </>
               ) : (
@@ -189,87 +264,131 @@ export function AnalysisSection({
       <div className={`border-t ${isDarkMode ? 'border-slate-700' : 'border-slate-200'}`}>
         {chartType === 'stacked-bar' && stackedKeys ? (
           <div className="flex flex-col">
-            {/* Tabla 1: Cantidad de Contratos */}
-            <div className={`px-4 py-3 border-b font-semibold text-sm ${isDarkMode ? 'border-slate-700 text-slate-200 bg-slate-800/50' : 'border-slate-200 text-slate-700 bg-slate-50'}`}>
-              Cantidad de Contratos por Grupo Atraso
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className={isDarkMode ? 'bg-slate-900/50' : 'bg-slate-50'}>
-                  <tr>
-                    <th className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                      Categoría
-                    </th>
-                    {stackedKeys.map(k => (
-                      <th key={k} className={`px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                        {k}
-                      </th>
-                    ))}
-                    <th className={`px-4 py-3 text-center text-xs font-bold uppercase tracking-wider whitespace-nowrap ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                      TOTAL
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className={`divide-y ${isDarkMode ? 'divide-slate-700' : 'divide-slate-200'}`}>
-                  {data.map((item, index) => (
-                    <tr key={index} className={`transition-colors ${isDarkMode ? 'hover:bg-slate-700/50' : 'hover:bg-slate-50'}`}>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: colors[index % colors.length] }} />
-                          <span className={`text-sm font-medium ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{item.name}</span>
-                        </div>
-                      </td>
-                      {stackedKeys.map(k => (
-                        <td key={k} className={`px-4 py-3 text-center text-sm whitespace-nowrap ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-                          {item[`${k}_count`] || 0}
-                        </td>
+            {activeTab === 'clientes' && (
+              <>
+                <div className={`px-4 py-3 border-b font-semibold text-sm ${isDarkMode ? 'border-slate-700 text-slate-200 bg-slate-800/50' : 'border-slate-200 text-slate-700 bg-slate-50'}`}>
+                  Cantidad de Contratos por Grupo Atraso
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className={isDarkMode ? 'bg-slate-900/50' : 'bg-slate-50'}>
+                      <tr>
+                        <th 
+                          onClick={() => handleSort('name')}
+                          className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap cursor-pointer hover:bg-slate-200/50 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                          Categoría {renderSortIcon('name')}
+                        </th>
+                        {stackedKeys.map(k => (
+                          <th 
+                            key={k} 
+                            onClick={() => handleSort(`${k}_count`)}
+                            className={`px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap cursor-pointer hover:bg-slate-200/50 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                            {k} {renderSortIcon(`${k}_count`)}
+                          </th>
+                        ))}
+                        <th 
+                          onClick={() => handleSort('count')}
+                          className={`px-4 py-3 text-center text-xs font-bold uppercase tracking-wider whitespace-nowrap cursor-pointer hover:bg-slate-200/50 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                          TOTAL {renderSortIcon('count')}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className={`divide-y ${isDarkMode ? 'divide-slate-700' : 'divide-slate-200'}`}>
+                      {sortedData.map((item, index) => (
+                        <tr key={index} className={`transition-colors ${isDarkMode ? 'hover:bg-slate-700/50' : 'hover:bg-slate-50'}`}>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <div className="flex items-center gap-2">
+                              <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: colors[index % colors.length] }} />
+                              <span className={`text-sm font-medium ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{item.name}</span>
+                            </div>
+                          </td>
+                          {stackedKeys.map(k => (
+                            <td key={k} className={`px-4 py-3 text-center text-sm whitespace-nowrap ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                              {item[`${k}_count`] || 0}
+                            </td>
+                          ))}
+                          <td className={`px-4 py-3 text-center text-sm font-bold whitespace-nowrap ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                            {item.count}
+                          </td>
+                        </tr>
                       ))}
-                      <td className={`px-4 py-3 text-center text-sm font-bold whitespace-nowrap ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                        {item.count}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot className={`border-t-2 ${isDarkMode ? 'border-slate-600 bg-slate-900/50' : 'border-slate-300 bg-slate-50'}`}>
-                  <tr>
-                    <td className={`px-4 py-3 text-sm font-bold whitespace-nowrap ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>TOTAL</td>
-                    {stackedKeys.map(k => {
-                      const colTotal = data.reduce((sum, item) => sum + (item[`${k}_count`] || 0), 0);
-                      return (
-                        <td key={k} className={`px-4 py-3 text-center text-sm font-bold whitespace-nowrap ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                          {colTotal}
-                        </td>
-                      );
-                    })}
-                    <td className={`px-4 py-3 text-center text-sm font-bold whitespace-nowrap ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{totalCount}</td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
+                    </tbody>
+                    <tfoot className={`border-t-2 ${isDarkMode ? 'border-slate-600 bg-slate-900/50' : 'border-slate-300 bg-slate-50'}`}>
+                      <tr>
+                        <td className={`px-4 py-3 text-sm font-bold whitespace-nowrap ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>TOTAL</td>
+                        {stackedKeys.map(k => {
+                          const colTotal = data.reduce((sum, item) => sum + (item[`${k}_count`] || 0), 0);
+                          return (
+                            <td key={k} className={`px-4 py-3 text-center text-sm font-bold whitespace-nowrap ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                              {colTotal}
+                            </td>
+                          );
+                        })}
+                        <td className={`px-4 py-3 text-center text-sm font-bold whitespace-nowrap ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{totalCount}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </>
+            )}
 
-            {/* Tabla 2: Valor Total */}
-            <div className={`px-4 py-3 border-y font-semibold text-sm ${isDarkMode ? 'border-slate-700 text-slate-200 bg-slate-800/50' : 'border-slate-200 text-slate-700 bg-slate-50'}`}>
-              Valor Total por Grupo Atraso
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className={isDarkMode ? 'bg-slate-900/50' : 'bg-slate-50'}>
+            {activeTab === 'valor' && (
+              <>
+                {/* Tabla 2: Valor Total e Indicadores Financieros */}
+                <div className={`px-4 py-3 border-b font-semibold text-sm ${isDarkMode ? 'border-slate-700 text-slate-200 bg-slate-800/50' : 'border-slate-200 text-slate-700 bg-slate-50'}`}>
+                  Valor Total y Metas Financieras por Regional
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className={isDarkMode ? 'bg-slate-900/50' : 'bg-slate-50'}>
                   <tr>
-                    <th className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                      Categoría
+                    <th 
+                      onClick={() => handleSort('name')}
+                      className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap cursor-pointer hover:bg-slate-200/50 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                      Categoría {renderSortIcon('name')}
                     </th>
                     {stackedKeys.map(k => (
-                      <th key={k} className={`px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                        {k}
+                      <th 
+                        key={k} 
+                        onClick={() => handleSort(k)}
+                        className={`px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap cursor-pointer hover:bg-slate-200/50 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                        {k} {renderSortIcon(k)}
                       </th>
                     ))}
-                    <th className={`px-4 py-3 text-center text-xs font-bold uppercase tracking-wider whitespace-nowrap ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                      TOTAL
+                    <th 
+                      onClick={() => handleSort('totalValue')}
+                      className={`px-4 py-3 text-center text-xs font-bold uppercase tracking-wider whitespace-nowrap cursor-pointer hover:bg-slate-200/50 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                      CARTERA TOTAL {renderSortIcon('totalValue')}
+                    </th>
+                    <th 
+                      onClick={() => handleSort('presupuesto')}
+                      className={`px-4 py-3 text-center text-xs font-bold uppercase tracking-wider whitespace-nowrap cursor-pointer hover:bg-slate-200/50 text-blue-500`}>
+                      PRESUPUESTO {renderSortIcon('presupuesto')}
+                    </th>
+                    <th 
+                      onClick={() => handleSort('recaudo')}
+                      className={`px-4 py-3 text-center text-xs font-bold uppercase tracking-wider whitespace-nowrap cursor-pointer hover:bg-slate-200/50 text-green-500`}>
+                      RECAUDO {renderSortIcon('recaudo')}
+                    </th>
+                    <th 
+                      onClick={() => handleSort('faltante')}
+                      className={`px-4 py-3 text-center text-xs font-bold uppercase tracking-wider whitespace-nowrap cursor-pointer hover:bg-slate-200/50 text-red-500`}>
+                      FALTANTE ($) {renderSortIcon('faltante')}
+                    </th>
+                    <th 
+                      onClick={() => handleSort('cumplimiento')}
+                      className={`px-4 py-3 text-center text-xs font-bold uppercase tracking-wider whitespace-nowrap cursor-pointer hover:bg-slate-200/50 text-teal-500`}>
+                      % CUMPL. {renderSortIcon('cumplimiento')}
+                    </th>
+                    <th 
+                      onClick={() => handleSort('proyeccionCumplimiento')}
+                      className={`px-4 py-3 text-center text-xs font-bold uppercase tracking-wider whitespace-nowrap cursor-pointer hover:bg-slate-200/50 text-indigo-500`}>
+                      PROY. CUMPL. {renderSortIcon('proyeccionCumplimiento')}
                     </th>
                   </tr>
                 </thead>
                 <tbody className={`divide-y ${isDarkMode ? 'divide-slate-700' : 'divide-slate-200'}`}>
-                  {data.map((item, index) => (
+                  {sortedData.map((item, index) => (
                     <tr key={index} className={`transition-colors ${isDarkMode ? 'hover:bg-slate-700/50' : 'hover:bg-slate-50'}`}>
                       <td className="px-4 py-3 whitespace-nowrap">
                         <div className="flex items-center gap-2">
@@ -284,6 +403,21 @@ export function AnalysisSection({
                       ))}
                       <td className={`px-4 py-3 text-center text-sm font-bold whitespace-nowrap ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                         {formatFullCurrency(item.totalValue)}
+                      </td>
+                      <td className={`px-4 py-3 text-center text-sm font-bold whitespace-nowrap ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                        {item.presupuesto !== undefined ? formatFullCurrency(item.presupuesto) : '-'}
+                      </td>
+                      <td className={`px-4 py-3 text-center text-sm font-bold whitespace-nowrap ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>
+                        {item.recaudo !== undefined ? formatFullCurrency(item.recaudo) : '-'}
+                      </td>
+                      <td className={`px-4 py-3 text-center text-sm font-bold whitespace-nowrap ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>
+                        {item.faltante !== undefined ? formatFullCurrency(item.faltante) : '-'}
+                      </td>
+                      <td className={`px-4 py-3 text-center text-sm font-bold whitespace-nowrap ${isDarkMode ? 'text-teal-400' : 'text-teal-600'}`}>
+                        {item.cumplimiento !== undefined ? `${(item.cumplimiento * 100).toFixed(1)}%` : '-'}
+                      </td>
+                      <td className={`px-4 py-3 text-center text-sm font-bold whitespace-nowrap ${isDarkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>
+                        {item.proyeccionCumplimiento !== undefined ? `${(item.proyeccionCumplimiento * 100).toFixed(1)}%` : '-'}
                       </td>
                     </tr>
                   ))}
@@ -300,40 +434,77 @@ export function AnalysisSection({
                       );
                     })}
                     <td className={`px-4 py-3 text-center text-sm font-bold whitespace-nowrap ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{formatFullCurrency(totalValue)}</td>
+                    <td className={`px-4 py-3 text-center text-sm font-bold whitespace-nowrap ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                      {formatFullCurrency(data.reduce((sum, item) => sum + (item.presupuesto || 0), 0))}
+                    </td>
+                    <td className={`px-4 py-3 text-center text-sm font-bold whitespace-nowrap ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>
+                      {formatFullCurrency(data.reduce((sum, item) => sum + (item.recaudo || 0), 0))}
+                    </td>
+                    <td className={`px-4 py-3 text-center text-sm font-bold whitespace-nowrap ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>
+                      {formatFullCurrency(data.reduce((sum, item) => sum + (item.faltante || 0), 0))}
+                    </td>
+                    <td className={`px-4 py-3 text-center text-sm font-bold whitespace-nowrap ${isDarkMode ? 'text-teal-400' : 'text-teal-600'}`}>
+                      {data.reduce((sum, item) => sum + (item.presupuesto || 0), 0) > 0 
+                        ? `${((data.reduce((sum, item) => sum + (item.recaudo || 0), 0) / data.reduce((sum, item) => sum + (item.presupuesto || 0), 0)) * 100).toFixed(1)}%` 
+                        : '-'}
+                    </td>
+                    <td className={`px-4 py-3 text-center text-sm font-bold whitespace-nowrap ${isDarkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>
+                      {(() => {
+                        const totalPresupuesto = data.reduce((sum, item) => sum + (item.presupuesto || 0), 0);
+                        const totalRecaudo = data.reduce((sum, item) => sum + (item.recaudo || 0), 0);
+                        const today = new Date();
+                        const diasTranscurridos = Math.max(1, today.getDate() - 1);
+                        const diasTotalesMes = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+                        const totalProyRecaudo = (totalRecaudo / diasTranscurridos) * diasTotalesMes;
+                        return totalPresupuesto > 0 
+                          ? `${((totalProyRecaudo / totalPresupuesto) * 100).toFixed(1)}%` 
+                          : '-';
+                      })()}
+                    </td>
                   </tr>
                 </tfoot>
               </table>
             </div>
-          </div>
-        ) : (
+          </>
+        )}
+      </div>
+    ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className={isDarkMode ? 'bg-slate-900/50' : 'bg-slate-50'}>
                 <tr>
-                  <th className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider ${
+                  <th 
+                    onClick={() => handleSort('name')}
+                    className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider cursor-pointer hover:bg-slate-200/50 ${
                     isDarkMode ? 'text-slate-400' : 'text-slate-600'
                   }`}>
-                    Categoría
+                    Categoría {renderSortIcon('name')}
                   </th>
-                  <th className={`px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider ${
+                  <th 
+                    onClick={() => handleSort('count')}
+                    className={`px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider cursor-pointer hover:bg-slate-200/50 ${
                     isDarkMode ? 'text-slate-400' : 'text-slate-600'
                   }`}>
-                    Contratos
+                    Contratos {renderSortIcon('count')}
                   </th>
-                  <th className={`px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider ${
+                  <th 
+                    onClick={() => handleSort('totalValue')}
+                    className={`px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider cursor-pointer hover:bg-slate-200/50 ${
                     isDarkMode ? 'text-slate-400' : 'text-slate-600'
                   }`}>
-                    Valor
+                    Valor {renderSortIcon('totalValue')}
                   </th>
-                  <th className={`px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider ${
+                  <th 
+                    onClick={() => handleSort('totalValue')}
+                    className={`px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider cursor-pointer hover:bg-slate-200/50 ${
                     isDarkMode ? 'text-slate-400' : 'text-slate-600'
                   }`}>
-                    % Total
+                    % Total {renderSortIcon('totalValue')}
                   </th>
                 </tr>
               </thead>
               <tbody className={`divide-y ${isDarkMode ? 'divide-slate-700' : 'divide-slate-200'}`}>
-                {data.map((item, index) => (
+                {sortedData.map((item, index) => (
                   <tr 
                     key={index}
                     className={`transition-colors ${

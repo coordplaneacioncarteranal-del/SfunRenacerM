@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { contractsData } from './data/contractsData';
+import { contractsData, budgetData } from './data/contractsData';
 import { FilterPanel } from './components/FilterPanel';
 import { MetricsGrid } from './components/MetricsGrid';
 import { AnalysisSection } from './components/AnalysisSection';
@@ -19,19 +19,23 @@ export default function App() {
   const [selectedTipo, setSelectedTipo] = useState<string[]>([]);
   const [selectedRegional, setSelectedRegional] = useState<string[]>([]);
   const [selectedGrupoAtraso, setSelectedGrupoAtraso] = useState<string[]>([]);
+  const [selectedGestion, setSelectedGestion] = useState<string[]>([]);
+  const [selectedGrupoCobro, setSelectedGrupoCobro] = useState<string[]>([]);
 
   // Estado para las pestañas
   const [activeTab, setActiveTab] = useState<'analisis' | 'alertas' | 'mapa'>('analisis');
 
   // Extraer valores únicos para los filtros
   const filterOptions = useMemo(() => ({
-    productoProvision: Array.from(new Set(contractsData.map(c => c.productoProvision))).sort(),
-    estadoVenta: Array.from(new Set(contractsData.map(c => c.estadoVenta))).sort(),
-    estadoProvision: Array.from(new Set(contractsData.map(c => c.estadoProvision))).sort(),
-    producto: Array.from(new Set(contractsData.map(c => c.producto))).sort(),
-    tipo: Array.from(new Set(contractsData.map(c => c.tipo))).sort(),
-    regional: Array.from(new Set(contractsData.map(c => (c as any).regional))).sort(),
-    grupoAtraso: Array.from(new Set(contractsData.map(c => c.grupoAtraso))).sort(),
+    productoProvision: Array.from(new Set(contractsData.map(c => c.productoProvision))).filter(Boolean).sort(),
+    estadoVenta: Array.from(new Set(contractsData.map(c => c.estadoVenta))).filter(Boolean).sort(),
+    estadoProvision: Array.from(new Set(contractsData.map(c => c.estadoProvision))).filter(Boolean).sort(),
+    producto: Array.from(new Set(contractsData.map(c => c.producto))).filter(Boolean).sort(),
+    tipo: Array.from(new Set(contractsData.map(c => c.tipo))).filter(Boolean).sort(),
+    regional: Array.from(new Set(contractsData.map(c => (c as any).regional))).filter(Boolean).sort(),
+    grupoAtraso: Array.from(new Set(contractsData.map(c => c.grupoAtraso))).filter(Boolean).sort(),
+    gestion: Array.from(new Set(contractsData.map(c => (c as any).gestion))).filter(Boolean).sort(),
+    grupoCobro: Array.from(new Set(contractsData.map(c => (c as any).grupoCobro))).filter(Boolean).sort(),
   }), []);
 
   // Filtrar datos según selección
@@ -51,10 +55,14 @@ export default function App() {
         selectedRegional.includes((contract as any).regional);
       const matchGrupoAtraso = selectedGrupoAtraso.length === 0 || 
         selectedGrupoAtraso.includes(contract.grupoAtraso);
+      const matchGestion = selectedGestion.length === 0 || 
+        selectedGestion.includes((contract as any).gestion);
+      const matchGrupoCobro = selectedGrupoCobro.length === 0 || 
+        selectedGrupoCobro.includes((contract as any).grupoCobro);
       
-      return matchProductoProvision && matchEstadoVenta && matchEstadoProvision && matchProducto && matchTipo && matchRegional && matchGrupoAtraso;
+      return matchProductoProvision && matchEstadoVenta && matchEstadoProvision && matchProducto && matchTipo && matchRegional && matchGrupoAtraso && matchGestion && matchGrupoCobro;
     });
-  }, [selectedProductoProvision, selectedEstadoVenta, selectedEstadoProvision, selectedProducto, selectedTipo, selectedRegional, selectedGrupoAtraso]);
+  }, [selectedProductoProvision, selectedEstadoVenta, selectedEstadoProvision, selectedProducto, selectedTipo, selectedRegional, selectedGrupoAtraso, selectedGestion, selectedGrupoCobro]);
 
   // KPIs globales
   const globalMetrics = useMemo(() => {
@@ -67,6 +75,22 @@ export default function App() {
       .filter(c => vencidoGroups.includes(c.grupoAtraso))
       .reduce((sum, c) => sum + c.valorTotalContrato, 0);
 
+    const filteredBudget = budgetData.filter(b => selectedRegional.length === 0 || selectedRegional.includes(b.regional));
+    const presupuesto = filteredBudget.reduce((sum, b) => sum + b.presupuesto, 0);
+    const recaudo = filteredBudget.reduce((sum, b) => sum + b.recaudo, 0);
+    const cumplimiento = presupuesto > 0 ? recaudo / presupuesto : 0;
+    const faltante = Math.max(0, presupuesto - recaudo);
+
+    // Calcular proyeccion
+    const today = new Date();
+    // Dias transcurridos hasta ayer
+    const diasTranscurridos = Math.max(1, today.getDate() - 1); 
+    // Dias totales del mes actual
+    const diasTotalesMes = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+    
+    const proyeccionRecaudo = (recaudo / diasTranscurridos) * diasTotalesMes;
+    const proyeccionCumplimiento = presupuesto > 0 ? (proyeccionRecaudo / presupuesto) : 0;
+
     return {
       totalContracts,
       activeContracts,
@@ -75,8 +99,13 @@ export default function App() {
       overdueValue,
       activeRate: totalContracts > 0 ? (activeContracts / totalContracts) * 100 : 0,
       overdueRate: totalContracts > 0 ? (overdueContracts / totalContracts) * 100 : 0,
+      presupuesto,
+      recaudo,
+      cumplimiento,
+      faltante,
+      proyeccionCumplimiento,
     };
-  }, [filteredData]);
+  }, [filteredData, selectedRegional]);
 
   // Analisis por categorías
   const analysisByAtraso = useMemo(() => {
@@ -166,19 +195,103 @@ export default function App() {
     }, {} as Record<string, any>);
 
     return Object.entries(grouped)
+      .map(([name, data]) => {
+        const bd = budgetData.filter(b => b.regional === name);
+        const p = bd.reduce((sum, b) => sum + b.presupuesto, 0);
+        const r = bd.reduce((sum, b) => sum + b.recaudo, 0);
+        const faltante = Math.max(0, p - r);
+
+        const today = new Date();
+        const diasTranscurridos = Math.max(1, today.getDate() - 1); 
+        const diasTotalesMes = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+        const proyRecaudo = (r / diasTranscurridos) * diasTotalesMes;
+        const proyeccionCumplimiento = p > 0 ? (proyRecaudo / p) : 0;
+
+        return { 
+          name, 
+          ...data,
+          presupuesto: p,
+          recaudo: r,
+          cumplimiento: p > 0 ? (r / p) : 0,
+          faltante: faltante,
+          proyeccionCumplimiento: proyeccionCumplimiento
+        };
+      })
+      .sort((a, b) => b.totalValue - a.totalValue);
+  }, [filteredData]);
+
+  const analysisByGrupoCobro = useMemo(() => {
+    const grouped = filteredData.reduce((acc, contract) => {
+      const key = (contract as any).grupoCobro || 'Sin Grupo';
+      const atrasoKey = contract.grupoAtraso;
+
+      if (!acc[key]) {
+        acc[key] = { count: 0, totalValue: 0 };
+      }
+      acc[key].count += 1;
+      acc[key].totalValue += contract.valorTotalContrato;
+      
+      if (!acc[key][atrasoKey]) {
+        acc[key][atrasoKey] = 0;
+        acc[key][`${atrasoKey}_count`] = 0;
+      }
+      acc[key][atrasoKey] += contract.valorTotalContrato;
+      acc[key][`${atrasoKey}_count`] += 1;
+
+      return acc;
+    }, {} as Record<string, any>);
+
+    return Object.entries(grouped)
       .map(([name, data]) => ({ name, ...data }))
       .sort((a, b) => b.totalValue - a.totalValue);
   }, [filteredData]);
+
+  const orderedAtrasoKeys = [
+    'ADELANTADO',
+    'ANTICIPADO DE -10 A 0',
+    'ATRASO DE 1 A 10',
+    'ATRASO DE 11 A 25',
+    'ATRASO DE 26 A 50',
+    'ATRASO DE 51 A 60',
+    'ATRASO DE 61 A 90',
+    'ATRASO MAYOR A 90'
+  ];
 
   const regionalStackedKeys = useMemo(() => {
     const keys = new Set<string>();
     analysisByRegional.forEach(item => {
       Object.keys(item).forEach(k => {
+        if (k !== 'name' && k !== 'count' && k !== 'totalValue' && !k.endsWith('_count') && 
+            k !== 'presupuesto' && k !== 'recaudo' && k !== 'cumplimiento' && 
+            k !== 'faltante' && k !== 'proyeccionCumplimiento') keys.add(k);
+      });
+    });
+    return Array.from(keys).sort((a, b) => {
+      const idxA = orderedAtrasoKeys.indexOf(a);
+      const idxB = orderedAtrasoKeys.indexOf(b);
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      if (idxA !== -1) return -1;
+      if (idxB !== -1) return 1;
+      return a.localeCompare(b);
+    });
+  }, [analysisByRegional]);
+
+  const grupoCobroStackedKeys = useMemo(() => {
+    const keys = new Set<string>();
+    analysisByGrupoCobro.forEach(item => {
+      Object.keys(item).forEach(k => {
         if (k !== 'name' && k !== 'count' && k !== 'totalValue' && !k.endsWith('_count')) keys.add(k);
       });
     });
-    return Array.from(keys);
-  }, [analysisByRegional]);
+    return Array.from(keys).sort((a, b) => {
+      const idxA = orderedAtrasoKeys.indexOf(a);
+      const idxB = orderedAtrasoKeys.indexOf(b);
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      if (idxA !== -1) return -1;
+      if (idxB !== -1) return 1;
+      return a.localeCompare(b);
+    });
+  }, [analysisByGrupoCobro]);
 
   const handleReset = () => {
     setSelectedProductoProvision([]);
@@ -188,6 +301,8 @@ export default function App() {
     setSelectedTipo([]);
     setSelectedRegional([]);
     setSelectedGrupoAtraso([]);
+    setSelectedGestion([]);
+    setSelectedGrupoCobro([]);
   };
 
   return (
@@ -222,6 +337,10 @@ export default function App() {
               setSelectedRegional={setSelectedRegional}
               selectedGrupoAtraso={selectedGrupoAtraso}
               setSelectedGrupoAtraso={setSelectedGrupoAtraso}
+              selectedGestion={selectedGestion}
+              setSelectedGestion={setSelectedGestion}
+              selectedGrupoCobro={selectedGrupoCobro}
+              setSelectedGrupoCobro={setSelectedGrupoCobro}
               onReset={handleReset}
             />
           </div>
@@ -230,7 +349,7 @@ export default function App() {
           <div className="w-full lg:w-3/4 flex flex-col gap-6">
             
             {/* Pestañas de Navegación */}
-            <div className={`flex border-b ${isDarkMode ? 'border-slate-700' : 'border-slate-200'}`}>
+            <div className={`flex flex-wrap border-b ${isDarkMode ? 'border-slate-700' : 'border-slate-200'}`}>
               <button 
                 onClick={() => setActiveTab('analisis')}
                 className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors flex items-center gap-2 ${
@@ -241,6 +360,17 @@ export default function App() {
               >
                 <BarChart3 size={16} />
                 Analisis de Datos
+              </button>
+              <button 
+                onClick={() => setActiveTab('grupo_cobro')}
+                className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors flex items-center gap-2 ${
+                  activeTab === 'grupo_cobro' 
+                    ? 'border-blue-500 text-blue-500' 
+                    : isDarkMode ? 'border-transparent text-slate-400 hover:text-slate-200' : 'border-transparent text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                <TrendingUp size={16} />
+                Analisis Grupo Cobro
               </button>
               <button 
                 onClick={() => setActiveTab('alertas')}
@@ -285,7 +415,7 @@ export default function App() {
                 </div>
 
                 {/* Grid de Analisis (Otros gráficos) */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-2">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
                   <AnalysisSection
                     title="Analisis por Atraso"
                     icon={AlertCircle}
@@ -323,6 +453,20 @@ export default function App() {
                   />
                 </div>
               </>
+            )}
+
+            {activeTab === 'grupo_cobro' && (
+              <div className="mt-2 animate-in fade-in duration-500">
+                <AnalysisSection
+                  title="Analisis por Grupo Cobro y Grupo Atraso"
+                  icon={TrendingUp}
+                  data={analysisByGrupoCobro}
+                  isDarkMode={isDarkMode}
+                  chartType="stacked-bar"
+                  colorScheme="status"
+                  stackedKeys={grupoCobroStackedKeys}
+                />
+              </div>
             )}
 
             {activeTab === 'alertas' && (
